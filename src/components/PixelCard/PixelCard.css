@@ -1,0 +1,152 @@
+:root {
+  --space: 1rem;
+  --bg: #09090b;
+  --fg: #e3e3e3;
+  --surface-1: #101012;
+  --surface-2: #27272a;
+  --surface-3: #52525b;
+  --ease-out: cubic-bezier(0.5, 1, 0.89, 1);
+  --ease-in-out: cubic-bezier(0.45, 0, 0.55, 1);
+}
+
+.card {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  grid-template-areas: "card";
+  place-items: center;
+  aspect-ratio: 4/5;
+  border: 1px solid var(--surface-2);
+  isolation: isolate;
+  transition: border-color 200ms var(--ease-out);
+  user-select: none;
+}
+
+.card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    circle at bottom left,
+    transparent 55%,
+    var(--surface-1)
+  );
+  pointer-events: none;
+  box-shadow: var(--bg) -0.5cqi 0.5cqi 2.5cqi inset;
+  transition: opacity 900ms var(--ease-out);
+}
+
+.card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  aspect-ratio: 1;
+  background: radial-gradient(circle, var(--bg), transparent 65%);
+  opacity: 0;
+  transition: opacity 800ms var(--ease-out);
+}
+
+.card > * {
+  grid-area: card;
+}
+
+/* Icon container styling */
+.card .icon-container {
+  position: relative;
+  z-index: 1;
+  width: 30%;
+  height: auto;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: var(--surface-3);
+  transition: 300ms var(--ease-out);
+  transition-property: color, transform;
+}
+
+/* Make the icon container a positioned container for the icon elements */
+.icon-container {
+  position: relative;
+}
+
+/* Style for default icon */
+.icon-default {
+  opacity: 1;
+  transition: opacity 300ms var(--ease-out);
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Style for hover icon */
+.icon-hover {
+  opacity: 0;
+  transition: opacity 300ms var(--ease-out);
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* When only one icon is provided, it should be positioned normally */
+.icon-single {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Make sure SVGs inside the container inherit the color */
+.card .icon-container svg {
+  color: inherit;
+  width: 100%;
+  height: 100%;
+}
+
+.card button {
+  opacity: 0;
+}
+
+.card:focus-within {
+  outline: 5px auto Highlight;
+  outline: 5px auto -webkit-focus-ring-color;
+}
+
+.card:where(:hover, :focus-within) {
+  border-color: var(--active-color, var(--fg));
+  transition: border-color 800ms var(--ease-in-out);
+}
+
+/* Update hover effect for the icon container */
+.card:where(:hover, :focus-within) .icon-container {
+  color: var(--active-color, var(--fg));
+  transform: scale(1.1);
+  transition: 300ms var(--ease-in-out);
+}
+
+/* Fade out the default icon and fade in the hover icon on hover */
+.card:where(:hover, :focus-within) .icon-default {
+  opacity: 0;
+}
+
+.card:where(:hover, :focus-within) .icon-hover {
+  opacity: 1;
+}
+
+.card:where(:hover, :focus-within)::before {
+  opacity: 0;
+}
+
+.card:where(:hover, :focus-within)::after {
+  opacity: 1;
+}

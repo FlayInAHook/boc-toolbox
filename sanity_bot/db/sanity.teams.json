@@ -1,0 +1,49 @@
+[{
+  "_id": {
+    "$oid": "67100960f0929c63a65a4b55"
+  },
+  "name": "ADOIT",
+  "config": {
+    "sonarQubeProjects": [
+      "ADOIT15:ADOIT",
+      "17.2.2:ADOIT",
+      "17.3.0:ADOIT",
+      "axx-mfbs:AXX",
+      "axx-mfbs29.2",
+      "axx-web:ADOXX",
+      "axx-web29.2"
+    ],
+    "members": [
+      "Boris Gregorcic",
+      "Christian Sauer",
+      "Djordjo Peric",
+      "Hafiz Khan",
+      "Kejda Balla",
+      "Mustafa Shubairi",
+      "Sara Blanco Fernandez",
+      "Mete Yildirim",
+      "Victoria Loibl",
+      "Tim Fechner",
+      "Serap Incedal",
+      "Hadi Alhlow"
+    ],
+    "blackDuckProjects": [
+      "c926530c-af0f-42e9-9598-b42a14341050",
+      "ed8c6d52-9759-4eeb-9522-b6a34546e349",
+      "2645878c-a8f5-4ca4-811d-4194b3b540ee"
+    ]
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "67af06119b3f3598a813841d"
+  },
+  "name": "ADOIT_AXX",
+  "config": {
+    "sonarQubeProjects": [],
+    "members": [],
+    "blackDuckProjects": []
+  },
+  "__v": 0
+}]

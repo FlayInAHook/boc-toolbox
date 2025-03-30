@@ -1,0 +1,13 @@
+{
+  "SONARQUBE_TOKEN": "your-sonarqube-token",
+  "SONARQUBE_URL": "http://localhost:9000",
+
+  "MONGODB_URL": "mongodb://localhost:27017/sanity",
+
+  "DATA_GATHER_INTERVAL_IN_MINUTES": 5,
+  
+  "SERVER_PORT": 3000,
+  
+  "BLACKDUCK_URL": "https://boc-eu.app.blackduck.com",
+  "BLACKDUCK_TOKEN": "your-blackduck-token"
+}
