@@ -25,14 +25,14 @@ const projectSchema = new Schema<ISonarQubeProject>({
   measures: { type: [measureSchema], required: true },
 });
 
-projectSchema.pre('find', function() {
+/*projectSchema.pre('find', function() {
   this._startTime = Date.now();
 });
 
 projectSchema.post('find', function() {
   const duration = Date.now() - this._startTime;
   console.log(`Query took ${duration}ms`);
-});
+});*/
 
 
 
@@ -73,6 +73,26 @@ const todoSchema = new Schema<ISonarQubeTodo>({
 });
 
 export const SonarQubeTodo = model<ISonarQubeTodo>("SonarQube_Todo", todoSchema);
+
+export interface ISonarQubeBug {
+  assignee: Types.ObjectId | null;
+  key: string;
+  project: string;
+  severity: string;
+  message: string;
+  component: string;
+}
+
+const bugSchema = new Schema<ISonarQubeBug>({
+  assignee: { type: Schema.Types.ObjectId, ref: "SonarQube_User", required: false },
+  key: { type: String, required: true },
+  project: { type: String, required: true },
+  severity: { type: String, required: true },
+  message: { type: String, required: true },
+  component: { type: String, required: true },
+});
+
+export const SonarQubeBug = model<ISonarQubeBug>("SonarQube_Bug", bugSchema);
 
 export interface BlackDuckRisk {
   licenseRisks: {

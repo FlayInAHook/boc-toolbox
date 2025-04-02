@@ -10,8 +10,7 @@
 import axios, { AxiosRequestConfig } from 'axios';
 import { app } from '.';
 import config from '../config.json';
-import { ISonarQubeMeasure, ISonarQubeProject, ISonarQubeTodo, ISonarQubeUser, SonarQubeProject, SonarQubeTodo, SonarQubeUser } from './dbDefinitions';
-
+import { ISonarQubeBug, ISonarQubeMeasure, ISonarQubeProject, ISonarQubeTodo, ISonarQubeUser, SonarQubeBug, SonarQubeProject, SonarQubeTodo, SonarQubeUser } from './dbDefinitions';
 
 function getUsersFromSonarQube(): Promise<ISonarQubeUser[]> {
   console.log("🤖 Getting users from SonarQube");
@@ -35,7 +34,6 @@ export function saveUsersToMongoDB(){
     });
   });
 }
-
 
 async function getTodosFromSonarQube(component: string, pageIndex = 1, issues: ISonarQubeTodo[] = []): Promise<ISonarQubeTodo[]> {
   console.log("🤖 Getting todos from SonarQube");
@@ -83,27 +81,55 @@ function saveTodosToMongoDB(projects: ISonarQubeProject[]){
     }
     ).catch((reason) => console.log("💾🤖🚨 Error deleting todos from MongoDB: " + reason));
   });
+}
 
+async function getBugsFromSonarQube(component: string, pageIndex = 1, bugs: ISonarQubeBug[] = []): Promise<ISonarQubeBug[]> {
+  console.log("🤖 Getting bugs from SonarQube");
+  const pageSize = 500; // max 500
+  const options: AxiosRequestConfig<any> = {
+    method: 'GET',
+    url: config.SONARQUBE_URL + "/api/issues/search",
+    params: {
+      components: component,
+      types: 'BUG',
+      p: pageIndex,
+      ps: pageSize,
+      issueStatuses: 'OPEN,CONFIRMED'
+    },
+    headers: {'Content-Type': 'application/json', "Authorization": `Bearer ${config.SONARQUBE_TOKEN}`},
+  };
+  
+  return axios.request(options).then(response => {
+    if (response.data.total > pageIndex * pageSize) {
+      return getBugsFromSonarQube(component, pageIndex + 1, bugs.concat(response.data.issues));
+    }
+    return bugs.concat(response.data.issues);
+  }).catch((reason) => { console.log("🤖🚨 Error getting bugs from SonarQube: " + reason); return []; })
+}
 
+function saveBugsToMongoDB(projects: ISonarQubeProject[]){
+  const components = projects.map(project => project.key);
 
-  /*getTodosFromSonarQube().then(todos => {
-    console.log("💾🤖 Saving todos to MongoDB");
-    SonarQubeTodo.deleteMany({}).then(() => {
-      todos.forEach(todo => {
-        SonarQubeUser.findOne({login: todo.assignee}).then(user => {
+  const promises = components.map(component => getBugsFromSonarQube(component));
+  Promise.all(promises).then(values => {
+    const bugs = values.flat();
+    console.log("💾🤖 Saving bugs to MongoDB");
+    SonarQubeBug.deleteMany({}).then(() => {
+      bugs.forEach(bug => {
+        SonarQubeUser.findOne({login: bug.assignee}).then(user => {
           if (user) {
-            todo.assignee = user._id; 
+            bug.assignee = user._id; 
           } else {
-            todo.assignee = null;
+            bug.assignee = null;
           }
-          SonarQubeTodo.updateOne({key: todo.key}, todo, {upsert: true}).then()
-            .catch((reason) => console.log("💾🤖🚨 Error saving todo to MongoDB: " + reason));
+          SonarQubeBug.updateOne({key: bug.key}, bug, {upsert: true}).then()
+            .catch((reason) => console.log("💾🤖🚨 Error saving bug to MongoDB: " + reason));
         }).catch((reason) => console.log("💾🤖🚨 Error finding user in MongoDB: " + reason));
       });
     }
-    ).catch((reason) => console.log("💾🤖🚨 Error deleting todos from MongoDB: " + reason));
-  });*/
-} 
+    ).catch((reason) => console.log("💾🤖🚨 Error deleting bugs from MongoDB: " + reason));
+  });
+}
 
 function getMeasuresFromSonarQube(projects: ISonarQubeProject[]): Promise<Map<string, any>>{
   const components = projects.map(project => project.key);
@@ -136,7 +162,6 @@ function getMeasureFromSonarQube(component: string): Promise<any> {
     return response.data.component.measures;
   }).catch((reason) => { console.log("🤖🚨 Error getting measure from SonarQube: " + reason, "Component: " + component); return null; })
 };
-
 
 function saveMeasuresToMongoDB(projects: ISonarQubeProject[]){
   getMeasuresFromSonarQube(projects).then(measures => {
@@ -206,17 +231,14 @@ function saveProjectsToMongoDB(){
     });
     saveMeasuresToMongoDB(projects);
     saveTodosToMongoDB(projects);
+    saveBugsToMongoDB(projects);
   }).catch((reason) => console.log("💾🤖🚨 Error getting projects from SonarQube: " + reason));
 };
-
-
-
 
 export function gatherDataFromSonarQube(){
   saveUsersToMongoDB();
   saveProjectsToMongoDB();
 }
-
 
 function getTodosAggregatedByAssignees(){
   return SonarQubeTodo.aggregate([
@@ -254,9 +276,34 @@ function getTodosAggregated() {
     });
 }
 
+function getBugsAggregated() {
+  return SonarQubeBug.aggregate([
+    { $lookup: { from: "sonarqube_users", let: { assigneeId: "$assignee" },
+        pipeline: [
+          { $match: { $expr: { $eq: ["$_id", "$$assigneeId"] } } },
+          { $project: { _id: 1, name: 1, avatar: 1 } },
+        ],
+        as: "assignee",
+      },
+    },
+    {
+      $addFields: {assignee: { $arrayElemAt: ["$assignee", 0] }, },},
+    { $addFields: { assigneeName: { $ifNull: ["$assignee.name", null] }, assigneeAvatar: { $ifNull: ["$assignee.avatar", null] }, }, },
+    { $group: { _id: "$assigneeName", bugs: { $push: "$$ROOT" }, avatar: { $first: "$assigneeAvatar" }, }, },
+    { $project: { _id: 0, assignee: "$_id", bugs: 1, avatar: 1, },},
+    { $unset: [ "bugs.assignee", "bugs._id", "bugs.__v", "bugs.assigneeAvatar", "bugs.assigneeName", ], },
+  ]).then((result) => {
+      return result;
+    }).catch((reason) => {
+      console.log("🤖🚨 Error getting bugs aggregated by assignees: " + reason);
+      return [];
+    });
+}
+
 export function registerSonarQubeRoutes(){
   //app.get("/todos", async () => getTodosAggregatedByAssignees());
   app.get("/todos", async () => getTodosAggregated());
+  app.get("/bugs", async () => getBugsAggregated());
   // only return relevant measure fields
   app.get("/projects", async () => SonarQubeProject.find({}, {key: 1, name: 1, measures: {$slice: -14}, _id: 0}));
   app.get("/users", async () => SonarQubeUser.find({}, {name: 1, login: 1, id: 1, avatar: 1, _id: 0}));
